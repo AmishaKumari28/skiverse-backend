@@ -8,6 +8,8 @@ const authMiddleware = require("./middleware/authMiddleware");
 const courseRoutes = require("./routes/courseRoutes");
 const userRoutes = require("./routes/userRoutes");
 const ratingRoutes = require("./routes/ratingRoutes");
+const feedbackRoutes = require("./routes/feedbackRoutes");
+
 
 const app = express();
 
@@ -19,6 +21,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/ratings", ratingRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 app.get("/api/protected", authMiddleware, (req, res) => {
     res.json({
