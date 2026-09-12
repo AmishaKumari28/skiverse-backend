@@ -138,15 +138,12 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-
 // ======================================================
 // BUY A COURSE
 // ======================================================
 
-router.post("/:id/buy", authMiddleware, async (req, res) => {
+  router.post("/:id/buy", authMiddleware, async (req, res) => {
     try {
-
-        // Find logged-in user
         const user = await User.findById(req.userId);
 
         if (!user) {
@@ -155,8 +152,6 @@ router.post("/:id/buy", authMiddleware, async (req, res) => {
             });
         }
 
-
-        // Find course
         const course = await Course.findById(req.params.id);
 
         if (!course) {
@@ -165,60 +160,74 @@ router.post("/:id/buy", authMiddleware, async (req, res) => {
             });
         }
 
+        // Prevent buying your own course
+        if (String(course.creatorId) === String(user._id)) {
+            return res.status(400).json({
+                message: "You cannot buy your own course"
+            });
+        }
 
-        // Check if already unlocked
+        // Find course creator
+        const creator = await User.findById(course.creatorId);
+
+        if (!creator) {
+            return res.status(404).json({
+                message: "Course creator not found"
+            });
+        }
+
+        // Check already unlocked
         if (user.unlockedCourses.includes(course._id.toString())) {
             return res.status(400).json({
                 message: "Course already unlocked"
             });
         }
 
+        const courseCredits = Number(course.credits);
 
         // Check credits
-        if (user.credits < course.credits) {
+        if (user.credits < courseCredits) {
             return res.status(400).json({
                 message: "Not enough credits"
             });
         }
 
+        // Transfer credits
+        user.credits -= courseCredits;
+        creator.credits += courseCredits;
 
-        // Deduct credits
-        user.credits -= course.credits;
-
-
-        // Add course to unlocked courses
+        // Unlock course
         user.unlockedCourses.push(course._id.toString());
 
-
-        // Add purchase to history
+        // Add history
         user.history.push({
             courseId: course._id,
             title: course.title,
-            creditsSpent: course.credits,
+            creditsSpent: courseCredits,
             date: new Date()
         });
 
-
-        // Save user
+        // Save BOTH users
         await user.save();
-
+        await creator.save();
 
         // Save transaction
         await Transaction.create({
             userId: user._id,
             courseId: course._id,
-            creditsSpent: course.credits,
+            creditsSpent: courseCredits,
             type: "purchase"
         });
-
 
         res.json({
             message: "Course purchased successfully",
             creditsRemaining: user.credits,
+            creatorCredits: creator.credits,
             unlockedCourse: course.title
         });
 
     } catch (error) {
+        console.error("COURSE PURCHASE ERROR:", error);
 
         res.status(500).json({
             message: "Course purchase failed",
