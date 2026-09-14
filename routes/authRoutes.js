@@ -10,6 +10,16 @@ router.post("/register", async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
+        // Check college email
+        const collegeEmailRegex =
+            /^(2508410(10|20|70)00(0[1-9]|[1-6][0-9]|7[0-8])|25084203000(0[1-9]|[1-6][0-9]|7[0-8]))@recsonbhadra\.ac\.in$/;
+
+        if (!collegeEmailRegex.test(email)) {
+            return res.status(400).json({
+                message: "Please use your valid college email ID"
+            });
+        }
+
         // Check if user already exists
         const existingUser = await User.findOne({ email });
 
@@ -105,3 +115,4 @@ router.post("/login", async (req, res) => {
 });
 
 module.exports = router;
+
